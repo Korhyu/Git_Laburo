@@ -2,4 +2,3 @@
  * Integral por segmentos
 
  */
-

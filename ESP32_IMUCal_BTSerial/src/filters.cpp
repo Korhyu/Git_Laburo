@@ -1,6 +1,16 @@
 //Funciones de filtrado estandar de 1 y segundo orden
 #include "filters.h"
+#include <Arduino.h>
 
+/*
+//Funcion que configura los filtros
+void RCFilter_Config(uint32_t sampleTime)
+{
+	uint8_t n;
+
+	//TODO
+}
+*/
 
 void RCFilter_Init(RCFilter *filt, float cutoffFreqHz, float sampleTimeS) {
 
@@ -17,7 +27,7 @@ void RCFilter_Init(RCFilter *filt, float cutoffFreqHz, float sampleTimeS) {
 
 }
 
-float RCFilter_Update(RCFilter *filt, float inp) {
+float RCFilter_Update(RCFilter * filt, float inp) {
 
 	/* Shift output samples */
 	filt->out[1] = filt->out[0];

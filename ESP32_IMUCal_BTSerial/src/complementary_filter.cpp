@@ -2,16 +2,10 @@
 #include "imu.h"
 #include "math.h"
 
-int cfPushData (imuData newData){
-    //Inserta los datos nuevos en el buffer del filtro
-
-	return 0;
-}
-
 
 //Metodo de Phills Lab https://www.youtube.com/watch?v=BUW2OdAtzBw
 // VERIFICADA
-cfData cfCalculate (imuData imu){
+cfData cfCalculate (imuData * imu){
     //Realiza los calculos con los datos enviados
 	
 	/* GLOSARIO
@@ -30,22 +24,22 @@ cfData cfCalculate (imuData imu){
 	static float phiHat_rad, thetaHat_rad;
 
 	//Estos son los angulos estimados por el acelerometro
-	phiHat_acc   = atan(imu.acc_y / imu.acc_z);		
-	thetaHat_acc = asin(imu.acc_x / G_CTE);					//Por falta de calibracion este cociente puede dar mas de 1 y por lo tanto el asin puede dar nan
+	phiHat_acc   = atan(imu->acc_y / imu->acc_z);		
+	thetaHat_acc = asin(imu->acc_x / G_CTE);					//Por falta de calibracion este cociente puede dar mas de 1 y por lo tanto el asin puede dar nan
 
 	//Correccion de thetaHat_acc - Cuando se calibre deberiamos eliminar esto
 	if(isnan(thetaHat_acc))
 	{
 		//Factor de ajuste
-		float adjFactor = G_CTE / imu.acc_rms;
-		thetaHat_acc = asin((imu.acc_x * adjFactor) / G_CTE);
+		float adjFactor = G_CTE / imu->acc_rms;
+		thetaHat_acc = asin((imu->acc_x * adjFactor) / G_CTE);
 	}
 
 
 	//Ahora paso al gyroscopo
-	p_rps = imu.gyr_x;
-	q_rps = imu.gyr_y;
-	r_rps = imu.gyr_z;
+	p_rps = imu->gyr_x;
+	q_rps = imu->gyr_y;
+	r_rps = imu->gyr_z;
 
 	//Paso a angulos de Euler
 	phiDot   = p_rps + tan(thetaHat_acc) * (sin(phiHat_acc) * q_rps + cos(phiHat_acc) * r_rps);
@@ -68,11 +62,23 @@ cfData cfCalculate (imuData imu){
 	resultados.yaw_rad = 0;
 	resultados.phiHat_deg = phiHat_rad * RAD2DEG;
 	resultados.thetaHat_deg = thetaHat_rad * RAD2DEG;
-	resultados.yaw_deg = 0 * RAD2DEG;
+	resultados.yaw_deg = resultados.yaw_rad * RAD2DEG;
 
 	return resultados;
 }
 
+String cfData2String (cfData * datos){
+	//Funcion que convierte los datos de "datos" a un String
+	String aux;
+
+	aux = String(datos->phiHat_deg, 1);
+	aux += ",";
+	aux += String(datos->thetaHat_deg, 1);
+	//aux += ",";
+	//aux += String(datos->yaw_deg, 1);
+
+	return aux;
+}
 
 //Integra las salidas del IMU - VERIFICADA
 attitudeData simpleIntegral (imuData imu) {

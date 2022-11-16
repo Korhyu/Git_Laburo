@@ -2,7 +2,7 @@
 #include "filters.h"
 #include "ICM42688.h"
 #include "math.h"
-#include "Arduino.h"
+#include <Arduino.h>
 #include "timerFunc.h"
 
 #ifndef IMU_H
@@ -10,23 +10,26 @@
 
 
 //Estados de la maquina de estados del IMU
-#define UNCALIBRATED	0		//Estado IDLE no hace nada
-#define CAL_Zp			1		//Calibrando eje +Z
-#define CAL_Zn			2		//Calibrando eje -Z
-#define CAL_Xp			3		//Calibrando eje +X
-#define CAL_Xn			4		//Calibrando eje -X
-#define CAL_Yp			5		//Calibrando eje +Y
-#define CAL_Yn			6		//Calibrando eje -Y
+#define CAL_Zp			0		//Calibrando eje +Z
+#define CAL_Zn			1		//Calibrando eje -Z
+#define CAL_Xp			2		//Calibrando eje +X
+#define CAL_Xn			3		//Calibrando eje -X
+#define CAL_Yp			4		//Calibrando eje +Y
+#define CAL_Yn			5		//Calibrando eje -Y
 #define SAMPLES_TAKED	7		//Tome las muestras de todos los ejes
-#define ALIGINING		8		//Permito la alineacion del sensor
 
-#define CALIBRATED		9		//IMU calibrado
-#define TAKING_SAMPLES	10		//Estoy tomando muestras
-#define IN_USE			11		//Esta en uso por el sistema
+#define CALSUB_PRINT_AXIS	0		//Estado de ploteo de eje a calibrar
+#define CALSUB_ALIGINING	1		//Permito la alineacion del sensor
+#define CALSUB_TAKING_SAMP	3		//Estoy tomando muestras
+#define CALSUB_CALCULATE	4		//Calculo los valores
 
-#define IN_CALIBRATION	12		//IMU Calibrandose
+#define UNCALIBRATED		-1		//IMU calibrado
+#define CALIBRATED			0		//IMU calibrado
 
-#define IMU_ERROR		-1		//Error en el IMU
+#define IN_USE				1		//Esta en uso por el sistema
+#define IN_CALIBRATION		2		//IMU Calibrandose
+
+#define IMU_ERROR			-1		//Error en el IMU
 
 // Mapa de registros
 #define TEMP_DATA0		0x1E	//30 decimal
@@ -44,11 +47,12 @@
 #define GYRO_DATA_Z0	0x2A	//42 decimal
 
 
-#define IMU_CAL_SIZE	500		//Cantidad de muestras que se usan para calibrar cada eje
-#define IMU_CAL_SAMP_MS	10		//Tiempo entre muestras durante la calibracion
-#define IMU_READ_MSJ_DELAY 1000	//Tiempo para leer los mensajes enviados por terminal
+#define IMU_CAL_SIZE		200		//Cantidad de muestras que se usan para calibrar cada eje
+#define IMU_CAL_SAMP_MS		50		//Tiempo entre muestras durante la calibracion
+#define IMU_SAMPLE_TIME_MS	50		//Delay entre muestras del IMU en uso
+#define IMU_READ_MSJ_DELAY	1000	//Tiempo para leer los mensajes enviados por terminal
 
-
+#define GRAV_CTE      			9.807f    //Acceleracion de la gravedad
 
 /********************* ESTRUCTURAS *********************/
 struct imuData{
@@ -87,24 +91,44 @@ struct attitudeData{
 };
 
 
-
-
-
+/*
+accCalBiasNew[0] = 5.583013, accCalBiasNew[1] = -2.435291, accCalBiasNew[2] = 1.993825
+accCalFactorNew[0] = 0.597278, accCalFactorNew[1] = 2.119864, accCalFactorNew[2] = 0.726255
+*/
 
 /* Matrices de calibracion del acelerometro */
 static float accCalBias[3] = 
 	{
-		-0.4561606,
-		 0.7066002,
-		 3.2257534
+		 5.498659,
+		-2.383453,	
+		 1.892426
 	};
 
+
+/*
+static float accCalBias[3] = 
+	{
+		-0.4561606,
+		 0.7066002,	
+		 3.2257534
+	};
+*/
+
+static float accCalFactor[3] = 
+	{
+		0.606738,
+		2.038399,
+		0.745166
+	};
+
+/*
 static float accCalFactor[3] = 
 	{
 		1.00392437,
 		1.02503296,
 		1.00309659
 	};
+*/
 
 static float gyrCalBias[3] = 
 	{
@@ -124,10 +148,11 @@ static float gyrCalFactor[3] =
 
 
 imuData getIMUSample (void);
-imuData compensateIMUValues (imuData raw);
-imuData filterIMUSample (imuData comp);
-cfData cfCalculate (imuData imu);
+imuData compensateIMUValues (imuData * raw);
+imuData filterIMUSample (imuData * comp);
+cfData cfCalculate (imuData * imu);
 
+int IMUmachineState (void);
 
 void printIMUData (imuData * datos);
 void printCFData (cfData * datos);
@@ -135,6 +160,8 @@ void printAllData (imuData * imu_raw, imuData * imu_fil, cfData * cf);
 void plotAttitude (imuData * imu_raw, imuData * imu_fil, attitudeData * attitude);
 void plotAttitude (cfData * cfDatos);
 void plotAttitudeBT (cfData * cfDatos);
+
+String imuData2String (imuData * datos);			//TODO Funcion que toma los datos del IMU y los convierte a un String para imprimirlos
 
 
 attitudeData simpleIntegral (imuData imu);

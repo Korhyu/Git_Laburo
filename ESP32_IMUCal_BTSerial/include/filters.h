@@ -2,6 +2,10 @@
 #define FILTERS_H
 
 
+#define	RC_FCUOFF_ACC	15.0f
+#define	RC_FCUOFF_GYR	25.0f
+
+
 typedef struct {
 
 	float coeff[2];
